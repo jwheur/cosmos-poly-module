@@ -71,6 +71,7 @@ func ErrBindAssetHash(reason string) error {
 func ErrLock(reason string) error {
 	return sdkerrors.Wrapf(ErrLockType, fmt.Sprintf("Reason: %s", reason))
 }
+
 func ErrUnLock(reason string) error {
 	return sdkerrors.Wrapf(ErrUnLockType, fmt.Sprintf("Reason: %s", reason))
 }

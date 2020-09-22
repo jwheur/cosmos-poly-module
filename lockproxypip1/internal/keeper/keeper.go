@@ -26,6 +26,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/supply/exported"
 	selfexported "github.com/polynetwork/cosmos-poly-module/lockproxypip1/exported"
 	"github.com/polynetwork/cosmos-poly-module/lockproxypip1/internal/types"
@@ -40,12 +41,15 @@ type Keeper struct {
 	bankKeeper   types.BankKeeper
 	supplyKeeper types.SupplyKeeper
 	ccmKeeper    types.CrossChainManager
+	paramSpace   params.Subspace
 	selfexported.UnlockKeeper
 }
 
 // NewKeeper creates a new mint Keeper instance
 func NewKeeper(
-	cdc *codec.Codec, key sdk.StoreKey, ak types.AccountKeeper, bk types.BankKeeper, supplyKeeper types.SupplyKeeper, ccmKeeper types.CrossChainManager) Keeper {
+	cdc *codec.Codec, key sdk.StoreKey, ak types.AccountKeeper, bk types.BankKeeper,
+	supplyKeeper types.SupplyKeeper, ccmKeeper types.CrossChainManager,
+	paramSpace params.Subspace) Keeper {
 
 	// ensure mint module account is set
 	if addr := supplyKeeper.GetModuleAddress(types.ModuleName); addr == nil {
@@ -59,6 +63,7 @@ func NewKeeper(
 		bankKeeper:   bk,
 		supplyKeeper: supplyKeeper,
 		ccmKeeper:    ccmKeeper,
+		paramSpace:   paramSpace.WithKeyTable(types.ParamKeyTable()),
 	}
 }
 
@@ -177,33 +182,7 @@ func (k Keeper) AssetIsRegistered(ctx sdk.Context, lockProxyHash []byte, assetHa
 }
 
 func (k Keeper) RegisterAsset(ctx sdk.Context, fromChainId uint64, fromContractAddr []byte, toContractAddr []byte, argsBs []byte) error {
-	if exist := k.EnsureLockProxyExist(ctx, toContractAddr); !exist {
-		return types.ErrRegisterAsset(fmt.Sprintf("lockproxy with hash: %s not created", toContractAddr))
-	}
-
-	args := new(types.RegisterAssetTxArgs)
-	if err := args.Deserialization(polycommon.NewZeroCopySource(argsBs)); err != nil {
-		return types.ErrUnLock(fmt.Sprintf("unlock, Deserialization args error:%s", err))
-	}
-	assetHash := args.AssetHash
-	// check if denom exists
-	nativeAssetHash := args.NativeAssetHash
-
-	if err := k.UpdateRegistry(ctx, toContractAddr, assetHash, fromChainId, fromContractAddr, nativeAssetHash); err != nil {
-		return err
-	}
-
-	ctx.EventManager().EmitEvents(sdk.Events{
-		sdk.NewEvent(
-			types.EventTypeRegisterAsset,
-			sdk.NewAttribute(types.AttributeKeyFromChainId, fmt.Sprintf("%d", fromChainId)),
-			sdk.NewAttribute(types.AttributeKeyFromContractHash, hex.EncodeToString(fromContractAddr)),
-			sdk.NewAttribute(types.AttributeKeyToContractHash, string(toContractAddr)),
-			sdk.NewAttribute(types.AttributeKeyAssetHash, hex.EncodeToString(assetHash)),
-			sdk.NewAttribute(types.AttributeKeyNativeAssetHash, string(nativeAssetHash)),
-		),
-	})
-	return nil
+	return types.ErrRegisterAsset("asset registration disallowed")
 }
 
 func (k Keeper) CreateCoinAndDelegateToProxy(ctx sdk.Context, creator sdk.AccAddress, coin sdk.Coin, lockproxyHash []byte, nativeChainId uint64, nativeLockProxyHash []byte, nativeAssetHash []byte) error {
@@ -220,11 +199,16 @@ func (k Keeper) CreateCoinAndDelegateToProxy(ctx sdk.Context, creator sdk.AccAdd
 		return err
 	}
 
-	if err := k.supplyKeeper.MintCoins(ctx, types.ModuleName, sdk.NewCoins(coin)); err != nil {
-		return types.ErrCreateCoinAndDelegateToProxy(fmt.Sprintf("supplyKeeper.MintCoins Error: %s", err.Error()))
+	if k.GetVersion(ctx) == 0 {
+		// only mint coins here in legacy version
+		if err := k.supplyKeeper.MintCoins(ctx, types.ModuleName, sdk.NewCoins(coin)); err != nil {
+			return types.ErrCreateCoinAndDelegateToProxy(fmt.Sprintf("supplyKeeper.MintCoins Error: %s", err.Error()))
+		}
+		k.IncreaseBalance(ctx, lockproxyHash, []byte(coin.Denom), nativeChainId, nativeLockProxyHash, nativeAssetHash, coin.Amount)
+	} else if !coin.Amount.IsZero() {
+		// version > 0 should create coins with 0 amt
+		return types.ErrCreateCoinAndDelegateToProxy(fmt.Sprintf("coin amount should be zero %d", coin.Amount))
 	}
-
-	k.IncreaseBalance(ctx, lockproxyHash, []byte(coin.Denom), nativeChainId, nativeLockProxyHash, nativeAssetHash, coin.Amount)
 
 	args := types.RegisterAssetTxArgs{
 		AssetHash:       []byte(coin.Denom),
@@ -316,6 +300,14 @@ func (k Keeper) Lock(ctx sdk.Context, lockProxyHash []byte, fromAddress sdk.AccA
 		return types.ErrLock(fmt.Sprintf("supplyKeeper.SendCoinsFromAccountToModule Error: from: %s, moduleAccount: %s of moduleName: %s, amount: %s", fromAddress.String(), k.supplyKeeper.GetModuleAccount(ctx, types.ModuleName).GetAddress(), types.ModuleName, amountCoins.String()))
 	}
 
+	// burn the module account coins unless legacy version
+	if k.GetVersion(ctx) > 0 {
+		// TODO: just burn all here?
+		if err := k.supplyKeeper.BurnCoins(ctx, types.ModuleName, amountCoins); err != nil {
+			return types.ErrLock(fmt.Sprintf("supplyKeeper.BurnCoins Error: %s", err.Error()))
+		}
+	}
+
 	sink := polycommon.NewZeroCopySink(nil)
 	if err := args.Serialization(sink, 32); err != nil {
 		return types.ErrLock(fmt.Sprintf("TxArgs Serialization Error:%v", err))
@@ -399,9 +391,13 @@ func (k Keeper) Unlock(ctx sdk.Context, fromChainId uint64, fromContractAddr sdk
 		}
 	}
 
-	// mint coin of sourceAssetDenom
+	// mint coin of sourceAssetDenom unless legacy version
 	amountCoins := sdk.NewCoins(sdk.NewCoin(toAssetDenom, afterFeeAmount))
-
+	if k.GetVersion(ctx) > 0 {
+		if err := k.supplyKeeper.MintCoins(ctx, types.ModuleName, amountCoins); err != nil {
+			return types.ErrLock(fmt.Sprintf("supplyKeeper.MintCoins Error: %s", err.Error()))
+		}
+	}
 	if err := k.supplyKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, toAcctAddress, amountCoins); err != nil {
 		return types.ErrUnLock(fmt.Sprintf("supplyKeeper.SendCoinsFromModuleToAccount, Error: send coins:%s from Module account:%s to receiver account:%s error", amountCoins.String(), k.GetModuleAccount(ctx).GetAddress().String(), toAcctAddress.String()))
 	}
@@ -425,4 +421,10 @@ func (k Keeper) Unlock(ctx sdk.Context, fromChainId uint64, fromContractAddr sdk
 		),
 	})
 	return nil
+}
+
+// GetVersion gets the runtime version of the lockproxypip1
+func (k Keeper) GetVersion(ctx sdk.Context) (version uint64) {
+	k.paramSpace.Get(ctx, types.Version, &version)
+	return
 }
