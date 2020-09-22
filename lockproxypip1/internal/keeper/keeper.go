@@ -42,6 +42,7 @@ type Keeper struct {
 	supplyKeeper types.SupplyKeeper
 	ccmKeeper    types.CrossChainManager
 	paramSpace   params.Subspace
+	hooks        types.LockProxyHooks
 	selfexported.UnlockKeeper
 }
 
@@ -458,6 +459,9 @@ func (k Keeper) Unlock(ctx sdk.Context, fromChainID uint64, fromContractAddr sdk
 			sdk.NewAttribute(types.AttributeKeyNonce, nonce.String()),
 		),
 	})
+
+	k.AfterUnlock(ctx, fromAcctAddress, toAcctAddress, amountCoins)
+
 	return nil
 }
 
