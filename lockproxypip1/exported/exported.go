@@ -21,8 +21,21 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// DelegationI delegation bond for a delegated proof of stake system
+// UnlockKeeper is the exported interface for keepers that can unlock tokens
 type UnlockKeeper interface {
-	Unlock(ctx sdk.Context, fromChainId uint64, fromContractAddr sdk.AccAddress, toContractAddr []byte, argsBs []byte) error
-	ContainToContractAddr(ctx sdk.Context, toContractAddr []byte, fromChainId uint64) bool
+	Unlock(ctx sdk.Context, fromChainID uint64, fromContractAddr sdk.AccAddress, toContractAddr []byte, argsBs []byte) error
+	ContainToContractAddr(ctx sdk.Context, toContractAddr []byte, fromChainID uint64) bool
+}
+
+// LockProxyKeeper is the exported interface for the LockProxyKeeper
+type LockProxyKeeper interface {
+	UnlockKeeper
+
+	EnsureLockProxyExist(ctx sdk.Context, creator sdk.AccAddress) bool
+	CreateLockProxy(ctx sdk.Context, creator sdk.AccAddress) error
+	CreateCoinAndDelegateToProxy(ctx sdk.Context, creator sdk.AccAddress, coin sdk.Coin, lockproxyHash []byte,
+		nativeChainID uint64, nativeLockProxyHash []byte, nativeAssetHash []byte) error
+	Lock(ctx sdk.Context, lockProxyHash []byte, fromAddress sdk.AccAddress, sourceAssetDenom string,
+		toChainID uint64, toChainProxyHash []byte, toChainAssetHash []byte, toAddressBs []byte,
+		value sdk.Int, deductFeeInLock bool, feeAmount sdk.Int, feeAddress []byte) error
 }

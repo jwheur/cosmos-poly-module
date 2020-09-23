@@ -43,7 +43,7 @@ type Keeper struct {
 	ccmKeeper    types.CrossChainManager
 	paramSpace   params.Subspace
 	hooks        types.LockProxyHooks
-	selfexported.UnlockKeeper
+	selfexported.LockProxyKeeper
 }
 
 // NewKeeper creates a new mint Keeper instance
@@ -460,7 +460,7 @@ func (k Keeper) Unlock(ctx sdk.Context, fromChainID uint64, fromContractAddr sdk
 		),
 	})
 
-	k.AfterUnlock(ctx, fromAcctAddress, toAcctAddress, amountCoins)
+	k.AfterProxyUnlock(ctx, fromAcctAddress, toAcctAddress, amountCoins)
 
 	return nil
 }

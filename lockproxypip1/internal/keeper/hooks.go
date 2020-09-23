@@ -14,9 +14,9 @@ func (k *Keeper) SetHooks(hooks types.LockProxyHooks) *Keeper {
 	return k
 }
 
-// AfterUnlock - call hook if registered
-func (k Keeper) AfterUnlock(ctx sdk.Context, from, to sdk.AccAddress, coin sdk.Coins) {
+// AfterProxyUnlock - call hook if registered
+func (k Keeper) AfterProxyUnlock(ctx sdk.Context, from, to sdk.AccAddress, coin sdk.Coins) {
 	if k.hooks != nil {
-		k.hooks.AfterUnlock(ctx, from, to, coin)
+		k.hooks.AfterProxyUnlock(ctx, from, to, coin)
 	}
 }
