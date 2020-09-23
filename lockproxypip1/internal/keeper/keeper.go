@@ -68,6 +68,17 @@ func NewKeeper(
 	}
 }
 
+// GetParams returns the total set of lockproxpip1 parameters.
+func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
+	k.paramSpace.GetParamSet(ctx, &params)
+	return params
+}
+
+// SetParams sets the total set of lockproxpip1 parameters.
+func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
+	k.paramSpace.SetParamSet(ctx, &params)
+}
+
 // GetModuleAccount gets the module account for this module.
 func (k Keeper) GetModuleAccount(ctx sdk.Context) exported.ModuleAccountI {
 	return k.supplyKeeper.GetModuleAccount(ctx, types.ModuleName)
@@ -336,7 +347,6 @@ func (k Keeper) Lock(ctx sdk.Context, lockProxyHash []byte, fromAddress sdk.AccA
 
 	// burn the module account coins unless legacy version
 	if k.GetVersion(ctx) > 0 {
-		// TODO: just burn all here?
 		if err := k.supplyKeeper.BurnCoins(ctx, types.ModuleName, amountCoins); err != nil {
 			return types.ErrLock(fmt.Sprintf("supplyKeeper.BurnCoins Error: %s", err.Error()))
 		}

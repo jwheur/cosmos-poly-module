@@ -47,13 +47,14 @@ func GetQueryCmd(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	ccQueryCmd.AddCommand(
 		flags.GetCommands(
 			GetCmdQueryProxyByOperator(queryRoute, cdc),
+			GetCmdQueryProxyParams(queryRoute, cdc),
 		)...,
 	)
 
 	return ccQueryCmd
 }
 
-// GetCmdQueryValidatorOutstandingRewards implements the query validator outstanding rewards command.
+// GetCmdQueryProxyByOperator implements the query validator outstanding rewards command.
 func GetCmdQueryProxyByOperator(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "proxy-hash-by-operator [operator_address]",
@@ -83,6 +84,37 @@ $ %s query %s proxy-hash-by-operator cosmos1c0n2e6kuzp03pqm3av9q2v0fqn6ql3z5c5dd
 			var proxyHash []byte
 			cdc.MustUnmarshalJSON(res, &proxyHash)
 			fmt.Printf("creator:%s with lock proxy hash:%x \n", operatorAddr, proxyHash)
+			return nil
+		},
+	}
+}
+
+// GetCmdQueryProxyParams gets the query to get params for this module
+func GetCmdQueryProxyParams(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "parameters",
+		Args:  cobra.NoArgs,
+		Short: "Query the parameters of lockproxypip1 module",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`
+
+Example:
+$ %s query %s parameters
+`,
+				version.ClientName, types.ModuleName,
+			),
+		),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			paramsBs, err := common.QueryParams(cliCtx, queryRoute)
+			if err != nil {
+				return err
+			}
+			var params types.Params
+			if err := cdc.UnmarshalJSON(paramsBs, &params); err != nil {
+				return err
+			}
+			fmt.Printf("Paramters res is:\n %s\n", params.String())
 			return nil
 		},
 	}

@@ -85,6 +85,7 @@ type (
 	MsgCreateCoinAndDelegateToProxy = types.MsgCreateCoinAndDelegateToProxy
 	MsgLock                         = types.MsgLock
 
+	Params          = types.Params
 	TxArgs          = types.TxArgs
 	LockProxyHooks  = types.LockProxyHooks
 	LockProxyKeeper = exported.LockProxyKeeper

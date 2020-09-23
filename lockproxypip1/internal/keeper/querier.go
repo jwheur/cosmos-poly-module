@@ -35,6 +35,8 @@ func NewQuerier(k Keeper) sdk.Querier {
 			return queryProxyByOperator(ctx, req, k)
 		case types.QueryRegistry:
 			return queryRegistry(ctx, req, k)
+		case types.QueryParameters:
+			return queryParams(ctx, k)
 		default:
 			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unknown query path: %s", path[0])
 		}
@@ -74,6 +76,16 @@ func queryRegistry(ctx sdk.Context, req abci.RequestQuery, k Keeper) ([]byte, er
 	bz, e := codec.MarshalJSONIndent(types.ModuleCdc, result)
 	if e != nil {
 		return nil, sdkerrors.Wrapf(sdkerrors.ErrJSONMarshal, "could not marshal result", result)
+	}
+
+	return bz, nil
+}
+
+func queryParams(ctx sdk.Context, k Keeper) ([]byte, error) {
+	params := k.GetParams(ctx)
+	bz, e := codec.MarshalJSONIndent(types.ModuleCdc, params)
+	if e != nil {
+		return nil, sdkerrors.Wrapf(sdkerrors.ErrJSONMarshal, "could not marshal value: %+v to JSON", params)
 	}
 
 	return bz, nil

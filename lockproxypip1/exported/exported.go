@@ -19,6 +19,7 @@ package exported
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/polynetwork/cosmos-poly-module/lockproxypip1/internal/types"
 )
 
 // UnlockKeeper is the exported interface for keepers that can unlock tokens
@@ -30,6 +31,9 @@ type UnlockKeeper interface {
 // LockProxyKeeper is the exported interface for the LockProxyKeeper
 type LockProxyKeeper interface {
 	UnlockKeeper
+
+	SetParams(ctx sdk.Context, params types.Params)
+	GetParams(ctx sdk.Context) (params types.Params)
 
 	EnsureLockProxyExist(ctx sdk.Context, creator sdk.AccAddress) bool
 	CreateLockProxy(ctx sdk.Context, creator sdk.AccAddress) error
