@@ -35,6 +35,8 @@ type LockProxyKeeper interface {
 	SetParams(ctx sdk.Context, params types.Params)
 	GetParams(ctx sdk.Context) (params types.Params)
 
+	GetVersion(ctx sdk.Context) (version uint64)
+
 	EnsureLockProxyExist(ctx sdk.Context, creator sdk.AccAddress) bool
 	CreateLockProxy(ctx sdk.Context, creator sdk.AccAddress) error
 	CreateCoinAndDelegateToProxy(ctx sdk.Context, creator sdk.AccAddress, coin sdk.Coin, lockproxyHash []byte,

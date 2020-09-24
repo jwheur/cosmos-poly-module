@@ -477,6 +477,6 @@ func (k Keeper) Unlock(ctx sdk.Context, fromChainID uint64, fromContractAddr sdk
 
 // GetVersion gets the runtime version of the lockproxypip1
 func (k Keeper) GetVersion(ctx sdk.Context) (version uint64) {
-	k.paramSpace.Get(ctx, types.Version, &version)
+	k.paramSpace.GetIfExists(ctx, types.Version, &version)
 	return
 }
