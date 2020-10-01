@@ -422,6 +422,14 @@ func (k Keeper) Unlock(ctx sdk.Context, fromChainID uint64, fromContractAddr sdk
 		return types.ErrUnLock("FromAddress is empty")
 	}
 
+	// mint coin of toAssetDenom unless legacy version
+	if k.GetVersion(ctx) > 0 {
+		mintCoins := sdk.NewCoins(sdk.NewCoin(toAssetDenom, amount))
+		if err := k.supplyKeeper.MintCoins(ctx, types.ModuleName, mintCoins); err != nil {
+			return types.ErrUnLock(fmt.Sprintf("supplyKeeper.MintCoins Error: %s", err.Error()))
+		}
+	}
+
 	afterFeeAmount := amount
 	feeAddressAcc := sdk.AccAddress(args.FeeAddress)
 	if feeAmount.GT(sdk.ZeroInt()) {
@@ -439,14 +447,7 @@ func (k Keeper) Unlock(ctx sdk.Context, fromChainID uint64, fromContractAddr sdk
 			return types.ErrUnLock(fmt.Sprintf("supplyKeeper.SendCoinsFromModuleToAccount, Error: send coins:%s from Module account:%s to receiver account:%s error", feeCoins.String(), k.GetModuleAccount(ctx).GetAddress().String(), feeAddressAcc.String()))
 		}
 	}
-
-	// mint coin of sourceAssetDenom unless legacy version
 	amountCoins := sdk.NewCoins(sdk.NewCoin(toAssetDenom, afterFeeAmount))
-	if k.GetVersion(ctx) > 0 {
-		if err := k.supplyKeeper.MintCoins(ctx, types.ModuleName, amountCoins); err != nil {
-			return types.ErrLock(fmt.Sprintf("supplyKeeper.MintCoins Error: %s", err.Error()))
-		}
-	}
 	if err := k.supplyKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, toAcctAddress, amountCoins); err != nil {
 		return types.ErrUnLock(fmt.Sprintf("supplyKeeper.SendCoinsFromModuleToAccount, Error: send coins:%s from Module account:%s to receiver account:%s error", amountCoins.String(), k.GetModuleAccount(ctx).GetAddress().String(), toAcctAddress.String()))
 	}
