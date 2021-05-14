@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/polynetwork/cosmos-poly-module/headersync/internal/types"
@@ -45,6 +46,12 @@ func NewKeeper(
 		cdc:      cdc,
 		storeKey: key,
 	}
+}
+
+// StoreIterator returns the iterator for the store
+func (k Keeper) StoreIterator(ctx sdk.Context, prefix []byte) sdk.Iterator {
+	store := ctx.KVStore(k.storeKey)
+	return sdk.KVStorePrefixIterator(store, prefix)
 }
 
 func (keeper Keeper) SyncGenesisHeader(ctx sdk.Context, genesisHeaderStr string) error {
