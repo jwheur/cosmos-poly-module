@@ -18,13 +18,14 @@
 package simapp
 
 import (
+	"io"
+	"os"
+
 	"github.com/polynetwork/cosmos-poly-module/btcx"
 	"github.com/polynetwork/cosmos-poly-module/ccm"
 	"github.com/polynetwork/cosmos-poly-module/ft"
 	"github.com/polynetwork/cosmos-poly-module/headersync"
 	"github.com/polynetwork/cosmos-poly-module/lockproxy"
-	"io"
-	"os"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -307,6 +308,7 @@ func NewSimApp(
 		auth.ModuleName, distr.ModuleName, staking.ModuleName, bank.ModuleName,
 		slashing.ModuleName, gov.ModuleName, mint.ModuleName, supply.ModuleName,
 		crisis.ModuleName, genutil.ModuleName, evidence.ModuleName,
+		ccm.ModuleName, headersync.ModuleName,
 	)
 
 	app.mm.RegisterInvariants(&app.CrisisKeeper)

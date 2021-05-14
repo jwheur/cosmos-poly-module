@@ -276,7 +276,7 @@ func (k Keeper) VerifyToCosmosTx(ctx sdk.Context, proof []byte, header *polytype
 		return nil, types.ErrVerifyToCosmosTx(fmt.Sprintf("check if this tx has been done, Error: %s", err.Error()))
 	}
 
-	k.putDoneTx(ctx, merkleValue.FromChainID, merkleValue.MakeTxParam.CrossChainID)
+	k.PutDoneTx(ctx, merkleValue.FromChainID, merkleValue.MakeTxParam.CrossChainID)
 
 	ctx.EventManager().EmitEvents(sdk.Events{
 		sdk.NewEvent(
@@ -304,7 +304,7 @@ func (k Keeper) checkDoneTx(ctx sdk.Context, fromChainId uint64, crossChainId []
 	return nil
 }
 
-func (k Keeper) putDoneTx(ctx sdk.Context, fromChainId uint64, crossChainId []byte) {
+func (k Keeper) PutDoneTx(ctx sdk.Context, fromChainId uint64, crossChainId []byte) {
 	store := ctx.KVStore(k.storeKey)
 	store.Set(GetDoneTxKey(fromChainId, crossChainId), crossChainId)
 }

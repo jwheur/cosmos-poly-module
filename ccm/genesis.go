@@ -18,24 +18,38 @@
 package ccm
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"strconv"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 // InitGenesis new ccm genesis
-func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) {
+func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.ValidatorUpdate {
 	keeper.SetParams(ctx, data.Params)
 
 	keeper.SetCrossChainId(ctx, data.CreatedTxCount)
 
 	store := keeper.Store(ctx)
-	// set details directly
+
+	// set details
 	for k, v := range data.CreatedTxDetails {
-		store.Set([]byte(k), v)
+		txParamHash := bytes.NewBufferString(k)
+		store.Set(GetCrossChainTxKey(txParamHash.Bytes()), v)
 	}
-	// set tx ids directly
+
+	// set tx ids
 	for k, v := range data.ReceivedTxIDs {
-		store.Set([]byte(k), v)
+		fromChainId, err := strconv.Atoi(k)
+		if err != nil {
+			panic(err)
+		}
+		keeper.PutDoneTx(ctx, uint64(fromChainId), v)
 	}
+
 	// set denom creators
 	for k, v := range data.DenomCreators {
 		addr, err := sdk.AccAddressFromBech32(v)
@@ -44,6 +58,8 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) {
 		}
 		keeper.SetDenomCreator(ctx, k, addr)
 	}
+
+	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
@@ -61,7 +77,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) GenesisState {
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		k, v := iter.Key(), iter.Value()
-		details[string(k)] = v
+		details[fmt.Sprintf("%x", k)] = v
 	}
 
 	// iterate ReceivedTxIDs
@@ -70,7 +86,8 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) GenesisState {
 	defer iter1.Close()
 	for ; iter1.Valid(); iter1.Next() {
 		k, v := iter1.Key(), iter1.Value()
-		txIDs[string(k)] = v
+		fromChainId := binary.LittleEndian.Uint64(k[1:8])
+		txIDs[fmt.Sprint(fromChainId)] = v
 	}
 
 	// iterate DenomCreators

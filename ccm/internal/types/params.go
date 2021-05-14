@@ -19,6 +19,7 @@ package types
 
 import (
 	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/x/params"
 )
 
@@ -39,7 +40,7 @@ func ParamKeyTable() params.KeyTable {
 // default ccm module parameters
 func DefaultParams() Params {
 	return Params{
-		ChainIdInPolyNet: 0,
+		ChainIdInPolyNet: 1,
 	}
 }
 

@@ -75,7 +75,7 @@ func queryRegistry(ctx sdk.Context, req abci.RequestQuery, k Keeper) ([]byte, er
 	}
 	bz, e := codec.MarshalJSONIndent(types.ModuleCdc, result)
 	if e != nil {
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrJSONMarshal, "could not marshal result", result)
+		return nil, sdkerrors.Wrapf(sdkerrors.ErrJSONMarshal, "could not marshal result")
 	}
 
 	return bz, nil
