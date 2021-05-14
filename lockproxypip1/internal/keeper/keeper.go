@@ -79,6 +79,17 @@ func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 	k.paramSpace.SetParamSet(ctx, &params)
 }
 
+// Store fetches the main kv store
+func (k Keeper) Store(ctx sdk.Context) sdk.KVStore {
+	return ctx.KVStore(k.storeKey)
+}
+
+// StoreIterator returns the iterator for the store
+func (k Keeper) StoreIterator(ctx sdk.Context, prefix []byte) sdk.Iterator {
+	store := ctx.KVStore(k.storeKey)
+	return sdk.KVStorePrefixIterator(store, prefix)
+}
+
 // GetModuleAccount gets the module account for this module.
 func (k Keeper) GetModuleAccount(ctx sdk.Context) exported.ModuleAccountI {
 	return k.supplyKeeper.GetModuleAccount(ctx, types.ModuleName)
@@ -148,7 +159,7 @@ func (k Keeper) updateRegistry(ctx sdk.Context, lockProxyHash []byte, assetHash 
 	return nil
 }
 
-func (k Keeper) getBalance(ctx sdk.Context, balanceKey []byte) sdk.Int {
+func (k Keeper) GetBalance(ctx sdk.Context, balanceKey []byte) sdk.Int {
 	store := ctx.KVStore(k.storeKey)
 	currentAmount := sdk.ZeroInt()
 	currentAmountBz := store.Get(balanceKey)
@@ -162,7 +173,7 @@ func (k Keeper) getBalance(ctx sdk.Context, balanceKey []byte) sdk.Int {
 	return currentAmount
 }
 
-func (k Keeper) storeBalance(ctx sdk.Context, balanceKey []byte, newAmount sdk.Int) {
+func (k Keeper) StoreBalance(ctx sdk.Context, balanceKey []byte, newAmount sdk.Int) {
 	store := ctx.KVStore(k.storeKey)
 	newAmountBz, err := k.cdc.MarshalBinaryLengthPrefixed(newAmount)
 	if err != nil {
@@ -181,9 +192,9 @@ func (k Keeper) IncreaseBalance(ctx sdk.Context, lockProxyHash []byte, assetHash
 		return
 	}
 	balanceKey := GetBalanceKey(lockProxyHash, assetHash, nativeChainID, nativeLockProxyHash, nativeAssetHash)
-	currentAmount := k.getBalance(ctx, balanceKey)
+	currentAmount := k.GetBalance(ctx, balanceKey)
 	newAmount := currentAmount.Add(amount)
-	k.storeBalance(ctx, balanceKey, newAmount)
+	k.StoreBalance(ctx, balanceKey, newAmount)
 }
 
 // DecreaseBalance decreases the balance locked in this module associated to the
@@ -196,12 +207,12 @@ func (k Keeper) DecreaseBalance(ctx sdk.Context, lockProxyHash []byte, assetHash
 		return nil
 	}
 	balanceKey := GetBalanceKey(lockProxyHash, assetHash, nativeChainID, nativeLockProxyHash, nativeAssetHash)
-	currentAmount := k.getBalance(ctx, balanceKey)
+	currentAmount := k.GetBalance(ctx, balanceKey)
 	newAmount := currentAmount.Sub(amount)
 	if newAmount.LT(sdk.ZeroInt()) {
 		return types.ErrBalance(fmt.Sprintf("insufficient balance, current balance: %s, decrement balance: %s", currentAmount.String(), amount.String()))
 	}
-	k.storeBalance(ctx, balanceKey, newAmount)
+	k.StoreBalance(ctx, balanceKey, newAmount)
 	return nil
 }
 
@@ -274,7 +285,7 @@ func (k Keeper) CreateCoinAndDelegateToProxy(ctx sdk.Context, creator sdk.AccAdd
 	return nil
 }
 
-func (k Keeper) getNextNonce(ctx sdk.Context) sdk.Int {
+func (k Keeper) GetNonce(ctx sdk.Context) sdk.Int {
 	store := ctx.KVStore(k.storeKey)
 
 	nonce := sdk.ZeroInt()
@@ -286,12 +297,22 @@ func (k Keeper) getNextNonce(ctx sdk.Context) sdk.Int {
 		}
 	}
 
-	newNonce := nonce.Add(sdk.NewInt(1))
-	newNonceBz, err := k.cdc.MarshalBinaryLengthPrefixed(newNonce)
+	return nonce
+}
+
+func (k Keeper) SetNonce(ctx sdk.Context, x sdk.Int) {
+	store := ctx.KVStore(k.storeKey)
+	newNonceBz, err := k.cdc.MarshalBinaryLengthPrefixed(x)
 	if err != nil {
 		panic(err)
 	}
 	store.Set(NonceKey, newNonceBz)
+}
+
+func (k Keeper) getNextNonce(ctx sdk.Context) sdk.Int {
+	nonce := k.GetNonce(ctx)
+	newNonce := nonce.Add(sdk.NewInt(1))
+	k.SetNonce(ctx, newNonce)
 
 	return newNonce
 }

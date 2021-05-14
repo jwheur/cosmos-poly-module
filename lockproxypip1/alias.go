@@ -67,6 +67,7 @@ var (
 	NewKeeper                          = keeper.NewKeeper
 	NewQuerier                         = keeper.NewQuerier
 	NewMsgCreateCoinAndDelegateToProxy = types.NewMsgCreateCoinAndDelegateToProxy
+	NewGenesisState                    = types.NewGenesisState
 
 	NewMsgLock            = types.NewMsgLock
 	NewMsgCreateLockProxy = types.NewMsgCreateLockProxy
@@ -77,6 +78,13 @@ var (
 
 	// query balance path
 	QueryProxyByOperator = types.QueryProxyByOperator
+
+	// key prefixes
+	GetOperatorToLockProxyKey = keeper.GetOperatorToLockProxyKey
+	OperatorToLockProxyKey    = keeper.OperatorToLockProxyKey
+	BindChainIdPrefix         = keeper.BindChainIdPrefix
+	RegistryPrefix            = keeper.RegistryPrefix
+	BalancePrefix             = keeper.BalancePrefix
 )
 
 type (
@@ -85,6 +93,7 @@ type (
 	MsgCreateCoinAndDelegateToProxy = types.MsgCreateCoinAndDelegateToProxy
 	MsgLock                         = types.MsgLock
 
+	GenesisState    = types.GenesisState
 	Params          = types.Params
 	TxArgs          = types.TxArgs
 	LockProxyHooks  = types.LockProxyHooks

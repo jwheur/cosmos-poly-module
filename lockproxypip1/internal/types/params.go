@@ -45,7 +45,9 @@ type Params struct {
 
 // NewParams creates a new Params object
 func NewParams() Params {
-	return Params{}
+	return Params{
+		Version: 1,
+	}
 }
 
 // DefaultParams defines the parameters for this module
