@@ -52,6 +52,10 @@ var (
 	NewMsgProcessCrossChainTx  = types.NewMsgProcessCrossChainTx
 	GetCrossChainTxKey         = keeper.GetCrossChainTxKey
 	GetDoneTxKey               = keeper.GetDoneTxKey
+	CrossChainTxDetailPrefix   = keeper.CrossChainTxDetailPrefix
+	CrossChainDoneTxPrefix     = keeper.CrossChainDoneTxPrefix
+	DenomToCreatorPrefix       = keeper.DenomToCreatorPrefix
+	CrossChainIdKey            = keeper.CrossChainIdKey
 	ModuleCdc                  = types.ModuleCdc
 	OperatorKey                = types.OperatorKey
 	NewQueryModuleBalanceParam = types.NewQueryModuleBalanceParam

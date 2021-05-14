@@ -58,6 +58,7 @@ func NewKeeper(cdc *codec.Codec, key sdk.StoreKey, paramSpace params.Subspace, h
 		ulKeeperMap:  nil,
 	}
 }
+
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
@@ -82,6 +83,17 @@ func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
 // SetParams sets the total set of ccm parameters.
 func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 	k.paramSpace.SetParamSet(ctx, &params)
+}
+
+// Store fetches the main kv store
+func (k Keeper) Store(ctx sdk.Context) sdk.KVStore {
+	return ctx.KVStore(k.storeKey)
+}
+
+// StoreIterator returns the iterator for the store
+func (k Keeper) StoreIterator(ctx sdk.Context, prefix []byte) sdk.Iterator {
+	store := ctx.KVStore(k.storeKey)
+	return sdk.KVStorePrefixIterator(store, prefix)
 }
 
 func (k Keeper) IfContainToContract(ctx sdk.Context, keystore string, toContractAddr []byte, fromChainId uint64) *types.QueryContainToContractRes {
@@ -131,11 +143,11 @@ func (k Keeper) GetModuleBalance(ctx sdk.Context, moduleName string) (sdk.Coins,
 }
 
 func (k Keeper) CreateCrossChainTx(ctx sdk.Context, fromAddr sdk.AccAddress, toChainId uint64, fromContractHash, toContractHash []byte, method string, args []byte) error {
-	crossChainId, err := k.getCrossChainId(ctx)
+	crossChainId, err := k.GetCrossChainId(ctx)
 	if err != nil {
 		return err
 	}
-	if err := k.setCrossChainId(ctx, crossChainId.Add(sdk.NewInt(1))); err != nil {
+	if err := k.SetCrossChainId(ctx, crossChainId.Add(sdk.NewInt(1))); err != nil {
 		return err
 	}
 
@@ -291,12 +303,13 @@ func (k Keeper) checkDoneTx(ctx sdk.Context, fromChainId uint64, crossChainId []
 	}
 	return nil
 }
+
 func (k Keeper) putDoneTx(ctx sdk.Context, fromChainId uint64, crossChainId []byte) {
 	store := ctx.KVStore(k.storeKey)
 	store.Set(GetDoneTxKey(fromChainId, crossChainId), crossChainId)
 }
 
-func (k Keeper) getCrossChainId(ctx sdk.Context) (sdk.Int, error) {
+func (k Keeper) GetCrossChainId(ctx sdk.Context) (sdk.Int, error) {
 	store := ctx.KVStore(k.storeKey)
 	idBs := store.Get(CrossChainIdKey)
 	if idBs == nil {
@@ -309,7 +322,8 @@ func (k Keeper) getCrossChainId(ctx sdk.Context) (sdk.Int, error) {
 
 	return crossChainId, nil
 }
-func (k Keeper) setCrossChainId(ctx sdk.Context, crossChainId sdk.Int) error {
+
+func (k Keeper) SetCrossChainId(ctx sdk.Context, crossChainId sdk.Int) error {
 	store := ctx.KVStore(k.storeKey)
 	idBs, err := k.cdc.MarshalBinaryLengthPrefixed(crossChainId)
 	if err != nil {

@@ -24,10 +24,67 @@ import (
 // InitGenesis new ccm genesis
 func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) {
 	keeper.SetParams(ctx, data.Params)
+
+	keeper.SetCrossChainId(ctx, data.CreatedTxCount)
+
+	store := keeper.Store(ctx)
+	// set details directly
+	for k, v := range data.CreatedTxDetails {
+		store.Set([]byte(k), v)
+	}
+	// set tx ids directly
+	for k, v := range data.ReceivedTxIDs {
+		store.Set([]byte(k), v)
+	}
+	// set denom creators
+	for k, v := range data.DenomCreators {
+		addr, err := sdk.AccAddressFromBech32(v)
+		if err != nil {
+			panic(err)
+		}
+		keeper.SetDenomCreator(ctx, k, addr)
+	}
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
 func ExportGenesis(ctx sdk.Context, keeper Keeper) GenesisState {
 	params := keeper.GetParams(ctx)
-	return NewGenesisState(params)
+
+	txCount, err := keeper.GetCrossChainId(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// iterate CreatedTxDetails
+	details := make(map[string][]byte, txCount.Int64())
+	iter := keeper.StoreIterator(ctx, CrossChainTxDetailPrefix)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		k, v := iter.Key(), iter.Value()
+		details[string(k)] = v
+	}
+
+	// iterate ReceivedTxIDs
+	txIDs := make(map[string][]byte)
+	iter1 := keeper.StoreIterator(ctx, CrossChainDoneTxPrefix)
+	defer iter1.Close()
+	for ; iter1.Valid(); iter1.Next() {
+		k, v := iter1.Key(), iter1.Value()
+		txIDs[string(k)] = v
+	}
+
+	// iterate DenomCreators
+	denomCreators := make(map[string]string)
+	iter2 := keeper.StoreIterator(ctx, DenomToCreatorPrefix)
+	defer iter2.Close()
+	for ; iter2.Valid(); iter2.Next() {
+		k, v := iter2.Key(), iter2.Value()
+		// extract denom
+		denom := string(k[1:])
+		// convert to accAddress
+		addr := sdk.AccAddress(v)
+		denomCreators[denom] = addr.String()
+	}
+
+	return NewGenesisState(params, txCount, details, txIDs, denomCreators)
 }
