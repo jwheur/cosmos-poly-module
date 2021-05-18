@@ -44,4 +44,5 @@ type LockProxyKeeper interface {
 	Lock(ctx sdk.Context, lockProxyHash []byte, fromAddress sdk.AccAddress, sourceAssetDenom string,
 		toChainID uint64, toChainProxyHash []byte, toChainAssetHash []byte, toAddressBs []byte,
 		value sdk.Int, deductFeeInLock bool, feeAmount sdk.Int, feeAddress []byte) error
+	SyncRegisteredAsset(ctx sdk.Context, syncer sdk.AccAddress, nativeChainID uint64, denom string, nativeAssetHash, lockProxyHash, nativeLockProxyHash []byte) error
 }
