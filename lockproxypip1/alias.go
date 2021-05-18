@@ -58,7 +58,6 @@ const (
 	EventTypeCreateLockProxy = types.EventTypeCreateLockProxy
 	AttributeKeyCreator      = types.AttributeKeyCreator
 	AttributeKeyProxyHash    = types.AttributeKeyProxyHash
-	AttributeKeyLockProxy    = types.AttributeKeyLockProxy
 )
 
 var (

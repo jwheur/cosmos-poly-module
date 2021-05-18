@@ -285,6 +285,45 @@ func (k Keeper) CreateCoinAndDelegateToProxy(ctx sdk.Context, creator sdk.AccAdd
 	return nil
 }
 
+// SyncRegisteredAsset syncs the registerAsset tx of an already registered asset to the native chain.
+func (k Keeper) SyncRegisteredAsset(ctx sdk.Context, syncer sdk.AccAddress, nativeChainID uint64, denom string, nativeAssetHash, lockProxyHash, nativeLockProxyHash []byte) error {
+	assetHash := []byte(denom)
+
+	// ensure the asset is indeed registered
+	if !k.AssetIsRegistered(ctx, lockProxyHash, assetHash, nativeChainID, nativeLockProxyHash, nativeAssetHash) {
+		return types.ErrSyncRegisteredAsset(fmt.Sprintf("asset not yet registered %x, %x, %d, %x, %x", lockProxyHash, assetHash, nativeChainID, nativeLockProxyHash, nativeAssetHash))
+	}
+
+	args := types.RegisterAssetTxArgs{
+		AssetHash:       assetHash,
+		NativeAssetHash: nativeAssetHash,
+	}
+
+	sink := polycommon.NewZeroCopySink(nil)
+	if err := args.Serialization(sink); err != nil {
+		return types.ErrSyncRegisteredAsset(fmt.Sprintf("TxArgs Serialization Error:%v", err))
+	}
+
+	if err := k.ccmKeeper.CreateCrossChainTx(ctx, syncer, nativeChainID, lockProxyHash, nativeLockProxyHash, "registerAsset", sink.Bytes()); err != nil {
+		return types.ErrSyncRegisteredAsset(
+			fmt.Sprintf("ccmKeeper.CreateCrossChainTx Error: toChainId: %d, fromContractHash: %x, toChainProxyHash: %x, args: %x",
+				nativeChainID, lockProxyHash, nativeLockProxyHash, args))
+	}
+
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeSyncRegisteredAsset,
+			sdk.NewAttribute(types.AttributeKeyToChainId, fmt.Sprintf("%d", nativeChainID)),
+			sdk.NewAttribute(types.AttributeKeyAssetHash, hex.EncodeToString(assetHash)),
+			sdk.NewAttribute(types.AttributeKeyNativeAssetHash, hex.EncodeToString(nativeAssetHash)),
+			sdk.NewAttribute(types.AttributeKeyProxyHash, hex.EncodeToString(lockProxyHash)),
+			sdk.NewAttribute(types.AttributeKeyToChainProxyHash, hex.EncodeToString(nativeLockProxyHash)),
+		),
+	})
+
+	return nil
+}
+
 func (k Keeper) GetNonce(ctx sdk.Context) sdk.Int {
 	store := ctx.KVStore(k.storeKey)
 
@@ -403,7 +442,7 @@ func (k Keeper) Lock(ctx sdk.Context, lockProxyHash []byte, fromAddress sdk.AccA
 			sdk.NewAttribute(types.AttributeKeyFromAddress, fromAddress.String()),
 			sdk.NewAttribute(types.AttributeKeyToAddress, hex.EncodeToString(toAddressBs)),
 			sdk.NewAttribute(types.AttributeKeyAmount, value.String()),
-			sdk.NewAttribute(types.AttributeKeyLockProxy, hex.EncodeToString(fromContractHash)),
+			sdk.NewAttribute(types.AttributeKeyProxyHash, hex.EncodeToString(fromContractHash)),
 			sdk.NewAttribute(types.AttributeKeyFeeAmount, feeAmount.String()),
 			sdk.NewAttribute(types.AttributeKeyFeeAddress, feeAddressAcc.String()),
 			sdk.NewAttribute(types.AttributeKeyNonce, nonce.String()),
