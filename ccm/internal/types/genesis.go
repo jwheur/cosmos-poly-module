@@ -62,7 +62,7 @@ func ValidateGenesis(data GenesisState) error {
 	}
 
 	if data.CreatedTxCount != sdk.NewInt(int64(len(data.CreatedTxDetails))) {
-		return fmt.Errorf("number of CreatedTxDetails should match CreatedTxCount in ccm genesis, is %d but expected %d", len(data.CreatedTxDetails), data.CreatedTxCount)
+		return fmt.Errorf("number of CreatedTxDetails should match CreatedTxCount in ccm genesis, is %d but expected %s", len(data.CreatedTxDetails), data.CreatedTxCount.String())
 	}
 
 	return nil
