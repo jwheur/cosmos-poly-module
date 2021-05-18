@@ -19,6 +19,7 @@ package lockproxypip1
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -55,20 +56,29 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 
 	// set chain ids directly
 	for k, v := range data.ChainIDs {
-		buffer := bytes.NewBufferString(k)
-		store.Set(buffer.Bytes(), v)
+		key, err := hex.DecodeString(k)
+		if err != nil {
+			panic(err)
+		}
+		store.Set(key, v)
 	}
 
 	// set registries directly
 	for k, v := range data.Registries {
-		buffer := bytes.NewBufferString(k)
-		store.Set(buffer.Bytes(), v)
+		key, err := hex.DecodeString(k)
+		if err != nil {
+			panic(err)
+		}
+		store.Set(key, v)
 	}
 
-	// set balances
+	// set balances directly
 	for k, v := range data.Balances {
-		buffer := bytes.NewBufferString(k)
-		keeper.StoreBalance(ctx, buffer.Bytes(), v)
+		key, err := hex.DecodeString(k)
+		if err != nil {
+			panic(err)
+		}
+		keeper.StoreBalance(ctx, key, v)
 	}
 
 	return []abci.ValidatorUpdate{}
@@ -108,7 +118,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) GenesisState {
 		registries[fmt.Sprintf("%x", k)] = v
 	}
 
-	// iterate DenomCreators
+	// iterate Balances
 	balances := make(map[string]sdk.Int)
 	iter3 := keeper.StoreIterator(ctx, BalancePrefix)
 	defer iter3.Close()

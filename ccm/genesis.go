@@ -20,8 +20,8 @@ package ccm
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
-	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -37,17 +37,28 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 
 	// set details
 	for k, v := range data.CreatedTxDetails {
-		txParamHash := bytes.NewBufferString(k)
-		store.Set(GetCrossChainTxKey(txParamHash.Bytes()), v)
+		txParamHash, err := hex.DecodeString(k)
+		if err != nil {
+			panic(err)
+		}
+		store.Set(GetCrossChainTxKey(txParamHash), v)
 	}
 
 	// set tx ids
 	for k, v := range data.ReceivedTxIDs {
-		fromChainId, err := strconv.Atoi(k)
+		key, err := hex.DecodeString(k)
 		if err != nil {
 			panic(err)
 		}
-		keeper.PutDoneTx(ctx, uint64(fromChainId), v)
+
+		fromChainId := binary.LittleEndian.Uint64(key[0:8])
+		toChainId := key[8:]
+
+		if bytes.Compare(toChainId, v) != 0 {
+			panic("Invalid toChainId in init genesis!")
+		}
+
+		keeper.PutDoneTx(ctx, fromChainId, toChainId)
 	}
 
 	// set denom creators
@@ -77,7 +88,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) GenesisState {
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		k, v := iter.Key(), iter.Value()
-		details[fmt.Sprintf("%x", k)] = v
+		details[fmt.Sprintf("%x", k[1:])] = v
 	}
 
 	// iterate ReceivedTxIDs
@@ -86,8 +97,7 @@ func ExportGenesis(ctx sdk.Context, keeper Keeper) GenesisState {
 	defer iter1.Close()
 	for ; iter1.Valid(); iter1.Next() {
 		k, v := iter1.Key(), iter1.Value()
-		fromChainId := binary.LittleEndian.Uint64(k[1:8])
-		txIDs[fmt.Sprint(fromChainId)] = v
+		txIDs[fmt.Sprintf("%x", k[1:])] = v
 	}
 
 	// iterate DenomCreators
