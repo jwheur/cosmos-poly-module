@@ -25,9 +25,6 @@ const (
 	// module name
 	ModuleName = "lockproxypip1"
 
-	// default paramspace for params keeper
-	DefaultParamspace = ModuleName
-
 	// StoreKey is the default store key for mint
 	StoreKey = ModuleName
 

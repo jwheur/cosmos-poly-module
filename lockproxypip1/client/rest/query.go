@@ -35,6 +35,11 @@ func registerQueryRoutes(cliCtx context.CLIContext, r *mux.Router, queryRoute st
 		fmt.Sprintf("/lockproxypip1/proxy_hash_by_operator/{%s}", Operator),
 		queryProxyHashByOperatorHandlerFn(cliCtx, queryRoute),
 	).Methods("GET")
+
+	r.HandleFunc(
+		fmt.Sprintf("/lockproxypip1/parameters"),
+		queryParams(cliCtx, queryRoute),
+	).Methods("GET")
 }
 
 func queryProxyHashByOperatorHandlerFn(cliCtx context.CLIContext, queryRoute string) http.HandlerFunc {
@@ -60,6 +65,33 @@ func checkResponseQueryProxyHashByOperatorResponse(
 	w http.ResponseWriter, cliCtx context.CLIContext, queryRoute string, operator sdk.AccAddress) (res []byte, ok bool) {
 
 	res, err := common.QueryProxyByOperator(cliCtx, queryRoute, operator)
+	if err != nil {
+		rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return nil, false
+	}
+
+	return res, true
+}
+
+func queryParams(cliCtx context.CLIContext, queryRoute string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cliCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, cliCtx, r)
+		if !ok {
+			return
+		}
+		res, ok := checkResponseQueryParamsResponse(w, cliCtx, queryRoute)
+		if !ok {
+			return
+		}
+
+		rest.PostProcessResponse(w, cliCtx, res)
+	}
+}
+
+func checkResponseQueryParamsResponse(
+	w http.ResponseWriter, cliCtx context.CLIContext, queryRoute string) (res []byte, ok bool) {
+
+	res, err := common.QueryParams(cliCtx, queryRoute)
 	if err != nil {
 		rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return nil, false

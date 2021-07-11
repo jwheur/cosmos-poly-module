@@ -43,3 +43,13 @@ func QueryRegistry(cliCtx context.CLIContext, queryRoute string, lockProxyHash [
 	)
 	return res, err
 }
+
+// QueryParams queries params for this module.
+func QueryParams(cliCtx context.CLIContext, queryRoute string) ([]byte, error) {
+
+	res, _, err := cliCtx.QueryWithData(
+		fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryParameters),
+		nil,
+	)
+	return res, err
+}

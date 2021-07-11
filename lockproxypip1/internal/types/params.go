@@ -23,57 +23,66 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/params"
 )
 
-// Parameter store keys
-var (
-	KeyCurrentChainIdForPolyChain = []byte("ChainIdForPolyChain")
+// Default parameter namespace
+const (
+	DefaultParamspace = ModuleName
 )
 
-type Params struct {
-	ChainIdInPolyNet uint64 `json:"chain_id_in_poly_net" yaml:"chain_id_in_poly_net"` // chain id of current cosmos chain for cross chain in poly chain network
-}
+// Parameter store keys
+var (
+	Version = []byte("Version")
+)
 
-// ParamTable for ccm module.
+// ParamKeyTable for the lockproxypip1 module
 func ParamKeyTable() params.KeyTable {
 	return params.NewKeyTable().RegisterParamSet(&Params{})
 }
 
-// default ccm module parameters
-func DefaultParams() Params {
+// Params - used for initializing default parameter for lockproxy1 at genesis
+type Params struct {
+	Version uint64 `json:"version" yaml:"version"` // current lock proxy version
+}
+
+// NewParams creates a new Params object
+func NewParams() Params {
 	return Params{
-		ChainIdInPolyNet: 1,
+		Version: 1,
 	}
 }
 
-// validate params
+// DefaultParams defines the parameters for this module
+func DefaultParams() Params {
+	return NewParams()
+}
+
+// Validate validates the params
 func (p Params) Validate() error {
-	if err := validateChainId(p.ChainIdInPolyNet); err != nil {
+	if err := validateVersion(p.Version); err != nil {
 		return err
 	}
 	return nil
 }
 
-func validateChainId(i interface{}) error {
+func validateVersion(i interface{}) error {
 	v, ok := i.(uint64)
 	if !ok {
-		return fmt.Errorf("invalid parameter type: %T", i)
+		return fmt.Errorf("Invalid version parameter type: %T", i)
 	}
-	if v == 0 {
-		return fmt.Errorf("ChainId for Poly Chain Network needs to be configured manually, and non-zero, got: %d", v)
+	if v < 0 {
+		return fmt.Errorf("Invalid negative version, got: %d", v)
 	}
 	return nil
 }
 
 func (p Params) String() string {
-	return fmt.Sprintf(`Ccm Params:
-  Current CrossChainId:             %d
-`,
-		p.ChainIdInPolyNet,
+	return fmt.Sprintf(`LockProxyPip1 Params:
+  Version:             %d`, p.Version,
 	)
 }
 
-// Implements params.ParamSet
+// ParamSetPairs - Implements params.ParamSet
 func (p *Params) ParamSetPairs() params.ParamSetPairs {
 	return params.ParamSetPairs{
-		params.NewParamSetPair(KeyCurrentChainIdForPolyChain, &p.ChainIdInPolyNet, validateChainId),
+		params.NewParamSetPair(Version, &p.Version, validateVersion),
 	}
 }

@@ -23,12 +23,11 @@ const (
 
 	EventTypeCreateLockProxy = "create_lock_proxy"
 	AttributeKeyCreator      = "creator"
-	AttributeKeyProxyHash    = "lock_proxy_hash"
 
 	EventTypeCreateAndDelegateCoinToProxy = "create_and_delegate_coin_to_proxy"
 
 	EventTypeBindProxy           = "bind_proxy_hash"
-	AttributeKeyLockProxy        = "lock_proxy_hash"
+	AttributeKeyProxyHash        = "lock_proxy_hash"
 	AttributeKeyToChainId        = "to_chain_id"
 	AttributeKeyToChainProxyHash = "to_chain_proxy_hash"
 
@@ -54,4 +53,6 @@ const (
 	AttributeKeyToContractHash  = "to_contract_hash"
 	AttributeKeyAssetHash       = "asset_hash"
 	AttributeKeyNativeAssetHash = "native_asset_hash"
+
+	EventTypeSyncRegisteredAsset = "sync_registered_asset"
 )

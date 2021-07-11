@@ -18,13 +18,15 @@
 package simapp
 
 import (
+	"io"
+	"os"
+
 	"github.com/polynetwork/cosmos-poly-module/btcx"
 	"github.com/polynetwork/cosmos-poly-module/ccm"
 	"github.com/polynetwork/cosmos-poly-module/ft"
 	"github.com/polynetwork/cosmos-poly-module/headersync"
 	"github.com/polynetwork/cosmos-poly-module/lockproxy"
-	"io"
-	"os"
+	"github.com/polynetwork/cosmos-poly-module/lockproxypip1"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -101,6 +103,7 @@ var (
 		gov.ModuleName:            {supply.Burner},
 		btcx.ModuleName:           {supply.Burner, supply.Minter},
 		lockproxy.ModuleName:      {supply.Minter},
+		lockproxypip1.ModuleName:  {supply.Minter, supply.Burner},
 		ft.ModuleName:             {supply.Burner, supply.Minter},
 	}
 
@@ -140,23 +143,24 @@ type SimApp struct {
 	subspaces map[string]params.Subspace
 
 	// keepers
-	AccountKeeper    auth.AccountKeeper
-	BankKeeper       bank.Keeper
-	SupplyKeeper     supply.Keeper
-	StakingKeeper    staking.Keeper
-	SlashingKeeper   slashing.Keeper
-	MintKeeper       mint.Keeper
-	DistrKeeper      distr.Keeper
-	GovKeeper        gov.Keeper
-	CrisisKeeper     crisis.Keeper
-	UpgradeKeeper    upgrade.Keeper
-	ParamsKeeper     params.Keeper
-	EvidenceKeeper   evidence.Keeper
-	HeaderSyncKeeper headersync.Keeper
-	CcmKeeper        ccm.Keeper
-	BtcxKeeper       btcx.Keeper
-	LockProxyKeeper  lockproxy.Keeper
-	FtKeeper         ft.Keeper
+	AccountKeeper       auth.AccountKeeper
+	BankKeeper          bank.Keeper
+	SupplyKeeper        supply.Keeper
+	StakingKeeper       staking.Keeper
+	SlashingKeeper      slashing.Keeper
+	MintKeeper          mint.Keeper
+	DistrKeeper         distr.Keeper
+	GovKeeper           gov.Keeper
+	CrisisKeeper        crisis.Keeper
+	UpgradeKeeper       upgrade.Keeper
+	ParamsKeeper        params.Keeper
+	EvidenceKeeper      evidence.Keeper
+	HeaderSyncKeeper    headersync.Keeper
+	CcmKeeper           ccm.Keeper
+	BtcxKeeper          btcx.Keeper
+	LockProxyKeeper     lockproxy.Keeper
+	LockProxyPip1Keeper lockproxypip1.Keeper
+	FtKeeper            ft.Keeper
 	// the module manager
 	mm *module.Manager
 
@@ -180,8 +184,8 @@ func NewSimApp(
 		bam.MainStoreKey, auth.StoreKey, staking.StoreKey,
 		supply.StoreKey, mint.StoreKey, distr.StoreKey, slashing.StoreKey,
 		gov.StoreKey, params.StoreKey, upgrade.StoreKey, evidence.StoreKey,
-		headersync.StoreKey, ccm.StoreKey,
-		btcx.StoreKey, lockproxy.StoreKey, ft.StoreKey,
+		headersync.StoreKey, ccm.StoreKey, btcx.StoreKey, ft.StoreKey,
+		lockproxy.StoreKey, lockproxypip1.StoreKey,
 	)
 	tkeys := sdk.NewTransientStoreKeys(params.TStoreKey)
 
@@ -206,6 +210,7 @@ func NewSimApp(
 	app.subspaces[crisis.ModuleName] = app.ParamsKeeper.Subspace(crisis.DefaultParamspace)
 	app.subspaces[evidence.ModuleName] = app.ParamsKeeper.Subspace(evidence.DefaultParamspace)
 	app.subspaces[ccm.ModuleName] = app.ParamsKeeper.Subspace(ccm.DefaultParamspace)
+	app.subspaces[lockproxypip1.ModuleName] = app.ParamsKeeper.Subspace(lockproxypip1.DefaultParamspace)
 
 	// add keepers
 	app.AccountKeeper = auth.NewAccountKeeper(
@@ -266,6 +271,7 @@ func NewSimApp(
 	app.CcmKeeper = ccm.NewKeeper(app.cdc, keys[ccm.StoreKey], app.subspaces[ccm.ModuleName], app.HeaderSyncKeeper, app.SupplyKeeper)
 	app.BtcxKeeper = btcx.NewKeeper(app.cdc, keys[btcx.StoreKey], app.AccountKeeper, app.BankKeeper, app.SupplyKeeper, app.CcmKeeper)
 	app.LockProxyKeeper = lockproxy.NewKeeper(app.cdc, keys[lockproxy.StoreKey], app.AccountKeeper, app.SupplyKeeper, app.CcmKeeper)
+	app.LockProxyPip1Keeper = lockproxypip1.NewKeeper(app.cdc, keys[lockproxy.StoreKey], app.AccountKeeper, app.BankKeeper, app.SupplyKeeper, app.CcmKeeper, app.subspaces[lockproxypip1.ModuleName])
 	app.FtKeeper = ft.NewKeeper(app.cdc, keys[ft.StoreKey], app.AccountKeeper, app.BankKeeper, app.SupplyKeeper, app.CcmKeeper)
 	app.CcmKeeper.MountUnlockKeeperMap(map[string]ccm.UnlockKeeper{
 		btcx.StoreKey:      app.BtcxKeeper,
@@ -292,6 +298,7 @@ func NewSimApp(
 		ccm.NewAppModule(app.CcmKeeper),
 		btcx.NewAppModule(app.BtcxKeeper),
 		lockproxy.NewAppModule(app.LockProxyKeeper),
+		lockproxypip1.NewAppModule(app.LockProxyPip1Keeper),
 		ft.NewAppModule(app.FtKeeper),
 	)
 
@@ -307,6 +314,7 @@ func NewSimApp(
 		auth.ModuleName, distr.ModuleName, staking.ModuleName, bank.ModuleName,
 		slashing.ModuleName, gov.ModuleName, mint.ModuleName, supply.ModuleName,
 		crisis.ModuleName, genutil.ModuleName, evidence.ModuleName,
+		ccm.ModuleName, headersync.ModuleName, lockproxypip1.ModuleName,
 	)
 
 	app.mm.RegisterInvariants(&app.CrisisKeeper)

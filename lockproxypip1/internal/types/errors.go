@@ -39,6 +39,7 @@ var (
 	ErrRegistryAlreadyExistsType        = sdkerrors.Register(ModuleName, 12, "ErrRegistryAlreadyExistsType")
 	ErrRegisterAssetType                = sdkerrors.Register(ModuleName, 13, "ErrRegisterAssetType")
 	ErrBalanceType                      = sdkerrors.Register(ModuleName, 14, "ErrBalanceType")
+	ErrSyncRegisteredAssetType          = sdkerrors.Register(ModuleName, 15, "ErrSyncRegisteredAssetType")
 )
 
 func ErrInvalidChainId(chainId uint64) error {
@@ -71,6 +72,7 @@ func ErrBindAssetHash(reason string) error {
 func ErrLock(reason string) error {
 	return sdkerrors.Wrapf(ErrLockType, fmt.Sprintf("Reason: %s", reason))
 }
+
 func ErrUnLock(reason string) error {
 	return sdkerrors.Wrapf(ErrUnLockType, fmt.Sprintf("Reason: %s", reason))
 }
@@ -93,4 +95,8 @@ func ErrRegisterAsset(reason string) error {
 
 func ErrBalance(reason string) error {
 	return sdkerrors.Wrapf(ErrBalanceType, fmt.Sprintf("Reason: %s", reason))
+}
+
+func ErrSyncRegisteredAsset(reason string) error {
+	return sdkerrors.Wrapf(ErrSyncRegisteredAssetType, fmt.Sprintf("Reason: %s", reason))
 }

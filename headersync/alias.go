@@ -27,7 +27,6 @@ const (
 	DefaultParamspace             = types.DefaultParamspace
 	StoreKey                      = types.StoreKey
 	QuerierRoute                  = types.QuerierRoute
-	QueryParameters               = types.QueryParameters
 	QueryConsensusPeers           = types.QueryConsensusPeers
 	RouterKey                     = types.RouterKey
 	AttributeValueCategory        = types.AttributeValueCategory
@@ -43,6 +42,9 @@ var (
 	RegisterCodec                = types.RegisterCodec
 	NewQuerier                   = keeper.NewQuerier
 	NewKeeper                    = keeper.NewKeeper
+	NewGenesisState              = types.NewGenesisState
+	DefaultGenesisState          = types.DefaultGenesisState
+	ValidateGenesis              = types.ValidateGenesis
 	NewMsgSyncGenesisParam       = types.NewMsgSyncGenesisParam
 	NewMsgSyncHeadersParam       = types.NewMsgSyncHeadersParam
 	NewQueryConsensusPeersParams = types.NewQueryConsensusPeersParams
@@ -56,6 +58,7 @@ var (
 
 type (
 	Keeper              = keeper.Keeper
+	GenesisState        = types.GenesisState
 	ConsensusPeers      = types.ConsensusPeers
 	MsgSyncGenesisParam = types.MsgSyncGenesisParam
 	MsgSyncHeadersParam = types.MsgSyncHeadersParam

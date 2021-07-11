@@ -21,11 +21,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/polynetwork/cosmos-poly-module/headersync/internal/types"
 	polycommon "github.com/polynetwork/poly/common"
 	vconfig "github.com/polynetwork/poly/consensus/vbft/config"
@@ -36,9 +35,8 @@ import (
 
 // Keeper of the mint store
 type Keeper struct {
-	cdc        *codec.Codec
-	storeKey   sdk.StoreKey
-	paramSpace params.Subspace
+	cdc      *codec.Codec
+	storeKey sdk.StoreKey
 }
 
 // NewKeeper creates a new mint Keeper instance
@@ -48,6 +46,12 @@ func NewKeeper(
 		cdc:      cdc,
 		storeKey: key,
 	}
+}
+
+// StoreIterator returns the iterator for the store
+func (k Keeper) StoreIterator(ctx sdk.Context, prefix []byte) sdk.Iterator {
+	store := ctx.KVStore(k.storeKey)
+	return sdk.KVStorePrefixIterator(store, prefix)
 }
 
 func (keeper Keeper) SyncGenesisHeader(ctx sdk.Context, genesisHeaderStr string) error {
@@ -66,6 +70,10 @@ func (keeper Keeper) SyncGenesisHeader(ctx sdk.Context, genesisHeaderStr string)
 	}
 	if err := keeper.UpdateConsensusPeer(ctx, genesisHeader); err != nil {
 		return err
+	}
+	// Make sure the header contains poly.NewChainConfig info
+	if _, err := keeper.GetConsensusPeers(ctx, genesisHeader.ChainID); err != nil {
+		return types.ErrSyncGenesisHeader(fmt.Sprintf("After UpdteConsensusPeer, Get Consensus Peers error: %v", err))
 	}
 	return nil
 }
@@ -118,7 +126,8 @@ func (keeper Keeper) VerifyHeaderSig(ctx sdk.Context, header *polytype.Header) e
 		return types.ErrSyncBlockHeader("GetConsensusPeer", header.ChainID, header.Height, err)
 	}
 	if header.Height <= consensusPeer.Height {
-		return types.ErrSyncBlockHeader("Compare height", header.ChainID, header.Height, errors.New(fmt.Sprintf("Stored consensus header.Height: %d, trying to sync height:%d", consensusPeer.Height, header.Height)))
+		return types.ErrSyncBlockHeader("Compare height", header.ChainID, header.Height,
+			fmt.Errorf("Stored consensus header.Height: %d, trying to sync height:%d", consensusPeer.Height, header.Height))
 	}
 
 	if len(header.Bookkeepers)*3 < len(consensusPeer.PeerMap)*2 {
